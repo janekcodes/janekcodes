@@ -63,8 +63,14 @@ def build_svg(text, handle, aspect=0.7755, rock=True):
     W = max(len(l) for l in lines) * CW + 80
     H = round(W * aspect)
     block_h = len(lines) * CH
-    top = 30 + (H - 30 - block_h) / 2          # vertically centre the letters under the title bar
-    cx, cy = W / 2, top + block_h / 2
+    # centre the bright letter faces (the dim extrusion trails off to the lower-right,
+    # so centring on it would make the word look shifted left and up)
+    ink = [i for l in lines for i, c in enumerate(l) if c == "S"]
+    x0 = (W - (max(ink) - min(ink) + 1) * CW) / 2 - min(ink) * CW
+    face_rows = [r for r, l in enumerate(lines) if "S" in l]
+    face_mid = (min(face_rows) + max(face_rows) + 1) / 2 * CH
+    top = 30 + (H - 30) / 2 - face_mid            # centre the faces in the area under the title bar
+    cx, cy = W / 2, 30 + (H - 30) / 2
     p = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" '
          'font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">',
          '<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#111722"/>'
@@ -90,8 +96,8 @@ def build_svg(text, handle, aspect=0.7755, rock=True):
     p.append(f'<g transform="translate({-cx:.1f},{-cy:.1f})">')
     for i, l in enumerate(lines):
         spans = "".join('<tspan fill="#e6edf3">S</tspan>' if c == "S"
-                        else '<tspan fill="#22d3ee">+</tspan>' if c == "+" else " " for c in l)
-        p.append(f'<text xml:space="preserve" x="40" y="{top + 12 + i*CH:.1f}" font-size="14.5">{spans}</text>')
+                        else '<tspan fill="#39d353">+</tspan>' if c == "+" else " " for c in l)
+        p.append(f'<text xml:space="preserve" x="{x0:.1f}" y="{top + 12 + i*CH:.1f}" font-size="14.5">{spans}</text>')
     p.append("</g></g></g></g></svg>")
     return "\n".join(p)
 

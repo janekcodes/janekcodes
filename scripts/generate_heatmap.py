@@ -39,44 +39,54 @@ def empty_calendar():
     return {"totalContributions": 0, "weeks": weeks}
 
 def build_svg(cal, login, placeholder=False):
-    cell, gap, left, top = 12, 3, 40, 52
+    """Transparent, theme-aware graph that blends into the GitHub page (no window frame).
+    Every cell pops in along a left-to-right wave, then a soft shimmer keeps sweeping across
+    the active days."""
+    cell, gap, left, top = 12, 3, 24, 30
     weeks = cal["weeks"]
-    W = left * 2 + len(weeks) * (cell + gap)
-    H = top + 7 * (cell + gap) + 62
+    step = cell + gap
+    W = left * 2 + len(weeks) * step
+    H = top + 7 * step + 46
+    reveal_end = len(weeks) * 0.022 + 0.45
     p = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" '
          'font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">',
-         f'<rect width="{W}" height="{H}" rx="12" fill="#0d1117"/>',
-         f'<rect x="0.5" y="0.5" width="{W-1}" height="{H-1}" rx="12" fill="none" stroke="#30363d"/>',
-         f'<line x1="0" y1="30" x2="{W}" y2="30" stroke="#30363d"/>',
-         '<circle cx="20" cy="15" r="5" fill="#ff5f56"/><circle cx="36" cy="15" r="5" fill="#ffbd2e"/>'
-         '<circle cx="52" cy="15" r="5" fill="#27c93f"/>',
-         f'<text x="{W/2}" y="19" fill="#7d8590" font-size="12" text-anchor="middle">'
-         f'{html.escape(login)}@github: ~$ ./contributions.sh</text>']
+         '<style>'
+         '.l0{fill:#ebedf0}.l1{fill:#9be9a8}.l2{fill:#40c463}.l3{fill:#30a14e}.l4{fill:#216e39}'
+         '.t{fill:#656d76}'
+         '@media (prefers-color-scheme: dark){'
+         '.l0{fill:#161b22}.l1{fill:#0e4429}.l2{fill:#006d32}.l3{fill:#26a641}.l4{fill:#39d353}.t{fill:#7d8590}}'
+         '</style>']
     last_month = None
     for x, w in enumerate(weeks):
         days = w["contributionDays"]
         if days:
             m = datetime.date.fromisoformat(days[0]["date"]).strftime("%b")
             if m != last_month and x < len(weeks) - 1:
-                p.append(f'<text x="{left + x*(cell+gap)}" y="{top-8}" fill="#7d8590" font-size="10">{m}</text>')
+                p.append(f'<text class="t" x="{left + x*step}" y="{top-10}" font-size="10">{m}</text>')
                 last_month = m
         for d in days:
             lvl = LEVELS.get(d["contributionLevel"], 0)
-            t = (x * 0.025) + d["weekday"] * 0.01
-            cx, cy = left + x * (cell + gap), top + d["weekday"] * (cell + gap)
-            p.append(f'<rect x="{cx}" y="{cy}" width="{cell}" height="{cell}" rx="2" fill="{COLORS[lvl]}" opacity="0">'
-                     f'<title>{d["date"]}: {d["contributionCount"]} contribution{"s" if d["contributionCount"] != 1 else ""}</title>'
-                     f'<animate attributeName="opacity" from="0" to="1" begin="{t:.3f}s" dur="0.25s" fill="freeze"/></rect>')
-    fy = top + 7 * (cell + gap) + 12
-    p.append(f'<line x1="0" y1="{fy}" x2="{W}" y2="{fy}" stroke="#30363d"/>')
+            n = d["contributionCount"]
+            t = x * 0.022 + d["weekday"] * 0.012
+            cx, cy = left + x * step + cell / 2, top + d["weekday"] * step + cell / 2
+            anim = (f'<animateTransform attributeName="transform" type="scale" from="0.15" to="1" begin="{t:.3f}s" '
+                    'dur="0.4s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".2 .9 .3 1.3"/>'
+                    f'<animate attributeName="opacity" from="0" to="1" begin="{t:.3f}s" dur="0.3s" fill="freeze"/>')
+            if lvl > 0:   # shimmer wave: dips in brightness, sweeping left to right
+                anim += (f'<animate attributeName="opacity" values="1;0.4;1;1" keyTimes="0;0.1;0.28;1" dur="6s" '
+                         f'begin="{reveal_end + x*0.05:.2f}s" repeatCount="indefinite"/>')
+            p.append(f'<g transform="translate({cx},{cy})"><rect class="l{lvl}" x="{-cell/2}" y="{-cell/2}" '
+                     f'width="{cell}" height="{cell}" rx="2" opacity="0">'
+                     f'<title>{d["date"]}: {n} contribution{"s" if n != 1 else ""}</title>{anim}</rect></g>')
+    fy = top + 7 * step + 18
     msg = ("waiting for first daily run..." if placeholder
            else f'{cal["totalContributions"]} contributions in the last year')
-    p.append(f'<text x="{left}" y="{fy+27}" fill="#7d8590" font-size="13">$ <tspan fill="#c9d1d9">{html.escape(msg)}</tspan></text>')
-    lx = W - left - 5 * (cell + gap) - 70
-    p.append(f'<text x="{lx}" y="{fy+27}" fill="#7d8590" font-size="11" text-anchor="end">less</text>')
-    for i, c in enumerate(COLORS):
-        p.append(f'<rect x="{lx+8+i*(cell+gap)}" y="{fy+16}" width="{cell}" height="{cell}" rx="2" fill="{c}"/>')
-    p.append(f'<text x="{lx+16+5*(cell+gap)}" y="{fy+27}" fill="#7d8590" font-size="11">more</text>')
+    p.append(f'<text class="t" x="{left}" y="{fy}" font-size="12">{html.escape(msg)}</text>')
+    lx = W - left - 5 * step - 28
+    p.append(f'<text class="t" x="{lx}" y="{fy}" font-size="10" text-anchor="end">less</text>')
+    for i in range(5):
+        p.append(f'<rect class="l{i}" x="{lx+8+i*step}" y="{fy-10}" width="{cell}" height="{cell}" rx="2"/>')
+    p.append(f'<text class="t" x="{lx+16+5*step}" y="{fy}" font-size="10">more</text>')
     p.append("</svg>")
     return "\n".join(p)
 
