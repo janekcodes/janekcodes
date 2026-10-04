@@ -52,17 +52,24 @@ def make_lines(text):
             for c in range(5):
                 if FONT[ch][r][c] == "#":
                     grid[r][i * PITCH + c] = "S"
-    return ["".join(ch * 2 for ch in row) for row in grid]   # double width so letters look wide
+    rows = ["".join(ch * 2 for ch in row) for row in grid]   # double width so letters look wide
+    return [r for row in rows for r in (row, row)]            # and double height
 
-def build_svg(text, handle):
+def build_svg(text, handle, aspect=0.7755, rock=True):
+    """aspect = height/width of the panel. 0.7755 makes it the same height as portrait.svg
+    when the README shows the portrait at width 370 and this at width 490."""
     lines = make_lines(text)
     CW, CH = 9, 16
-    W, H = max(len(l) for l in lines) * CW + 80, len(lines) * CH + 120
+    W = max(len(l) for l in lines) * CW + 80
+    H = round(W * aspect)
+    block_h = len(lines) * CH
+    top = 30 + (H - 30 - block_h) / 2          # vertically centre the letters under the title bar
+    cx, cy = W / 2, top + block_h / 2
     p = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" '
          'font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">',
          '<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#111722"/>'
          '<stop offset="1" stop-color="#0d1117"/></linearGradient>'
-         f'<clipPath id="wipe"><rect x="0" y="40" height="{H}" width="0">'
+         f'<clipPath id="wipe"><rect x="0" y="31" height="{H}" width="0">'
          f'<animate attributeName="width" from="0" to="{W}" begin="0s" dur="1.6s" fill="freeze"/></rect></clipPath></defs>',
          f'<rect width="{W}" height="{H}" rx="12" fill="url(#bg)"/>',
          f'<rect x="0.5" y="0.5" width="{W-1}" height="{H-1}" rx="12" fill="none" stroke="#30363d"/>',
@@ -71,12 +78,21 @@ def build_svg(text, handle):
          '<circle cx="52" cy="15" r="5" fill="#27c93f"/>',
          f'<text x="{W/2}" y="19" fill="#7d8590" font-size="12" text-anchor="middle">'
          f'{html.escape(handle)}@github: ~$ ./wordmark.sh --3d</text>',
-         '<g clip-path="url(#wipe)">']
+         '<g clip-path="url(#wipe)">',
+         f'<g transform="translate({cx:.1f},{cy:.1f})"><g>']
+    if rock:   # rock back and forth on the vertical axis: squeeze + lean, in sync
+        p.append('<animateTransform attributeName="transform" type="scale" additive="replace" '
+                 'values="0.86 1;1 1;0.86 1;1 1;0.86 1" keyTimes="0;0.25;0.5;0.75;1" dur="6s" begin="1.6s" repeatCount="indefinite" calcMode="spline" '
+                 'keySplines=".45 0 .55 1;.45 0 .55 1;.45 0 .55 1;.45 0 .55 1"/>')
+        p.append('<animateTransform attributeName="transform" type="skewY" additive="sum" '
+                 'values="-4;0;4;0;-4" keyTimes="0;0.25;0.5;0.75;1" dur="6s" begin="1.6s" repeatCount="indefinite" calcMode="spline" '
+                 'keySplines=".45 0 .55 1;.45 0 .55 1;.45 0 .55 1;.45 0 .55 1"/>')
+    p.append(f'<g transform="translate({-cx:.1f},{-cy:.1f})">')
     for i, l in enumerate(lines):
         spans = "".join('<tspan fill="#e6edf3">S</tspan>' if c == "S"
                         else '<tspan fill="#22d3ee">+</tspan>' if c == "+" else " " for c in l)
-        p.append(f'<text xml:space="preserve" x="40" y="{70 + i*CH}" font-size="14.5">{spans}</text>')
-    p.append("</g></svg>")
+        p.append(f'<text xml:space="preserve" x="40" y="{top + 12 + i*CH:.1f}" font-size="14.5">{spans}</text>')
+    p.append("</g></g></g></g></svg>")
     return "\n".join(p)
 
 if __name__ == "__main__":
@@ -84,6 +100,7 @@ if __name__ == "__main__":
     ap.add_argument("--text", default="JANEK")
     ap.add_argument("--handle", default="janek")
     ap.add_argument("--out", default="wordmark.svg")
+    ap.add_argument("--no-rock", action="store_true", help="disable the rocking animation")
     a = ap.parse_args()
-    open(a.out, "w", encoding="utf-8").write(build_svg(a.text, a.handle))
+    open(a.out, "w", encoding="utf-8").write(build_svg(a.text, a.handle, rock=not a.no_rock))
     print("wrote", a.out)
