@@ -25,7 +25,7 @@
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-janekbasi-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/janekbasi/)
 [![GitHub](https://img.shields.io/badge/GitHub-janekcodes-0d1117?style=for-the-badge&logo=github&logoColor=white)](https://github.com/janekcodes)
-[![Instagram](https://img.shields.io/badge/Instagram-yourhandle-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/janekcodes)
+[![Instagram](https://img.shields.io/badge/Instagram-janekcodes-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/janekcodes)
 [![Live Terminal](https://img.shields.io/badge/⚡_Live_Terminal-janekcodes.github.io-22d3ee?style=for-the-badge&logo=gnometerminal&logoColor=black)](https://janekcodes.github.io)
 
 <br>
